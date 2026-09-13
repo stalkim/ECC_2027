@@ -73,8 +73,8 @@ no branch fits; `OUTSIDE_COVERAGE` means the local guard is not established.
 Neither outcome diagnoses a sensor fault.
 
 `trefoil_history.py` and `trefoil_benchmark.py` implement this comparison.
-The older `benchmark.py`, `geometric_checks.py`, `check_precision.py`, and
-polynomial/straight-path modules remain for regression and earlier-result
-reproduction. Their manufactured examples are not the current article's
-empirical validation. The repository excludes the manuscript, flight
-dynamics, global lap recovery and closed-loop control.
+`monotone_history.py` and `straight_history.py` provide shared inverse,
+interval-propagation and witness routines. The two test modules check these
+routines and the trefoil implementation. Earlier experiments remain in Git
+history. The repository excludes the manuscript, flight dynamics, global
+lap recovery and closed-loop control.
