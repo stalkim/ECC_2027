@@ -3,94 +3,78 @@
 Code for **Sharp Distinguishability Bounds and Certified Branch Recovery on
 Self-Intersecting Paths**, by Stanislav Kim and Anton Pyrkin.
 
-The code determines which directed branches can explain a finite position
-history when the path is known, the speed profile is unknown, and measurement
-errors and progress rates have known bounds.
+The decoder finds which branches of a known path can explain a finite
+position history under bounded errors and an unknown positive progress rate.
 
-## Requirements
+## Run
 
-Python 3.10 or later. No third-party packages are needed. Run commands from
-the repository root without `-O`, because validation uses assertions.
+Python 3.10 or later; no third-party packages. From the repository root:
 
 ```bash
 python3 demo.py
 python3 -m unittest discover -s . -p 'test_*.py'
+python3 trefoil_benchmark.py --output results/trefoil-01
 ```
 
-On Windows, use `python` instead of `python3` if needed.
+On Windows, use `python` if needed. Run without `-O`, since the retained
+regression checks use assertions. Each comparison requires a new output
+directory and refuses to overwrite an existing one.
 
-## Reproduce the results
+The demo returns ambiguous endpoints and a unique full history, with no
+directional pruning. It uses one case from the comparison below.
 
-Each command requires a new output directory and will not overwrite an
-existing one.
+## Source and assumptions
 
-Geometric boundary, curvature, informative histories, and scaling:
+The path is the trefoil from Yao et al., *Singularity-Free Guiding Vector
+Field for Robot Navigation*, IEEE T-RO 37(4), 1206–1221 (2021),
+[Section VI-D](https://arxiv.org/pdf/2012.01826v3),
+[doi:10.1109/TRO.2020.3043690](https://doi.org/10.1109/TRO.2020.3043690).
+Its sourced geometry, in metres, is
+`(80 cos(3u)+160)(cos(2u),sin(2u))+(79,-68.10)`.
 
-```bash
-python3 geometric_checks.py --output results/geometric-01
-```
+The exact substitution `q=tan(u/2)` permits rational coordinate evaluations.
+The two crossing charts are `[-1.1,-0.9]` and `[0.9,1.1]`. A position-based
+endpoint guard verifies their coverage; all methods consider both branches.
+Coordinate monotonicity is checked with rational interval bounds, not samples.
 
-Expected results:
+The comparison is a kinematic adaptation, not a replay of flight logs or the
+source controller. Source guidance frequency motivates 50 Hz position
+sampling. The 12 m/s reference and 400 m-per-q crossing tangent give nominal
+`q_dot=0.03`; `[0.027,0.033]` is our imposed 10% rate band, not a measured
+ground-speed bound. The error bounds `0.8,1.6,4` m are 1%, 2%, and 5% of
+the sourced 80 m scale; they are sensitivity settings, not sensor calibration.
 
-- 48 ambiguous midpoint histories at or below the straight-branch threshold
-  and 32 incompatible midpoint histories above it;
-- all 256 model-valid histories above the threshold uniquely identify the
-  correct branch;
-- nine cases in which endpoints are ambiguous but the full history is unique;
-- 369 chart-covered circular-arc cases, with 296 certified by the general
-  bound and 305 by the projected-chord bound;
-- unique decisions without pruning for 3, 9, and 33 samples.
+## Comparison
 
-Polynomial-path comparison and precision check:
+All 36 cases combine two crossing passages, spans `0.08,0.32,1.28` s,
+three error bounds, and zero/alternating bounded errors. Alternating errors
+use 80% of the allowed first-coordinate error. Cases share six underlying
+motions. There is no claim of 36 independent flights or a statistical test.
 
-```bash
-python3 benchmark.py --check-only --output results/polynomial-check-01
-python3 check_precision.py results/polynomial-check-01
-python3 benchmark.py --output results/polynomial-timing-01
-```
+| Method | UNIQUE | AMBIGUOUS | Coordinate calls |
+| --- | ---: | ---: | ---: |
+| Endpoint MI | 20 | 16 | 15552 |
+| Full DC | 26 | 10 | 225504 |
+| Full MI | 26 | 10 | 225504 |
+| Full DMI | 26 | 10 | 126576 |
 
-The 60 fixed histories contain 48 `UNIQUE`, 6 `AMBIGUOUS`, and 6
-`INCOMPATIBLE` cases. DC and MI use 57024 coordinate evaluations per batch;
-DMI uses 28512. DC checks pairwise temporal constraints, MI propagates
-feasible intervals, and DMI adds directional pruning. All three methods share
-the coordinate inverse routine.
+Six cases gain uniqueness from intermediate samples without pruning.
+DMI saves 43.9% of coordinate calls over full MI; this is not a runtime claim.
+DC checks pairwise temporal constraints; MI propagates feasible intervals;
+DMI adds lossless directional pruning. All share the inverse builder with
+24 bisections. Witnesses are checked in an expanded rational path equation.
+DC/MI current-parameter outers agree. DC is not a COMMA implementation.
 
-The scripts save inputs, separate ground truth, decisions, witnesses, source
-hashes, timings, and summaries under `results/`. Ground truth is used only for
-validation and is not passed to the decoders. The checks are deterministic.
+The output directory contains exact inputs, separate truth, all decisions,
+witnesses, source hashes, derivative certificates, summaries and CSV files.
+Truth is never passed to the decoder. `UNRESOLVED` is preserved if finite
+precision cannot establish feasibility or exclusion. `INCOMPATIBLE` means
+no branch fits; `OUTSIDE_COVERAGE` means the local guard is not established.
+Neither outcome diagnoses a sensor fault.
 
-Reference timings in the paper used Python 3.10.12 on Linux x86-64, one Python
-process, and an Intel Xeon Platinum 8468 CPU. Batch timings exclude setup and
-file output and will vary by machine.
-
-## Decisions
-
-- `UNIQUE`: exactly one branch has a checked feasible history.
-- `AMBIGUOUS`: both branches have checked feasible histories.
-- `INCOMPATIBLE`: neither branch can explain the measurements.
-- `UNRESOLVED`: finite-precision bounds do not settle the decision.
-- `OUTSIDE_COVERAGE`: the required chart-coverage condition fails.
-
-A nonempty outer interval alone does not prove that a feasible history exists.
-
-## Files
-
-- `straight_history.py`: straight branches with Euclidean error balls;
-- `monotone_history.py`: interval propagation and cubic-path decoder;
-- `extension_history.py`: quartic/quintic paths and DC, MI, DMI;
-- `geometric_checks.py`: geometric and informative-history checks;
-- `benchmark.py` and `check_precision.py`: polynomial comparison;
-- `demo.py` and `test_*.py`: examples and regression tests.
-
-## Scope
-
-The repository covers the stated known-path models. It does not include the
-manuscript, arbitrary-curve recovery, unknown geometry, global lap recovery,
-vehicle dynamics, or closed-loop control.
-
-The temporal-constraint formulation follows R. Dechter, I. Meiri, and
-J. Pearl, ["Temporal constraint
-networks"](https://www.sciencedirect.com/science/article/pii/0004370291900066),
-*Artificial Intelligence*, 49 (1991), 61-95. Interval reachability and
-set-membership estimation are established methods; DC is not an external
-map-matching implementation.
+`trefoil_history.py` and `trefoil_benchmark.py` implement this comparison.
+The older `benchmark.py`, `geometric_checks.py`, `check_precision.py`, and
+polynomial/straight-path modules remain for regression and earlier-result
+reproduction. Their manufactured examples are not the current article's
+empirical validation. The repository excludes the manuscript, flight
+dynamics, global lap recovery and closed-loop control.

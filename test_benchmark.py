@@ -8,7 +8,6 @@ import unittest
 
 from benchmark import prepare, run, write_json
 from check_precision import check
-from demo import examples
 from extension_history import verify_witness
 from monotone_history import CHARTS, decode
 
@@ -56,8 +55,25 @@ class BenchmarkTests(unittest.TestCase):
             self.assertEqual(sentinel.read_text(), "keep\n")
             self.assertEqual(list(output.iterdir()), [sentinel])
 
-    def test_demo_decisions(self):
-        for name, history in examples().items():
+    def test_legacy_status_controls(self):
+        # Manufactured controls are regression fixtures, not publication data.
+        zero = [['0', '0', '0'], ['0', '0', '0']]
+        controls = {
+            'unique': {
+                'times': ['-0.02', '0'],
+                'positions': [['-0.0396', '-0.019404', '0'], ['0', '0', '0']],
+                'linf_errors': ['0.0005', '0.0005'],
+            },
+            'ambiguous': {
+                'times': ['-0.01', '0.01'], 'positions': zero,
+                'linf_errors': ['0.06', '0.06'],
+            },
+            'incompatible': {
+                'times': ['-0.01', '0.01'], 'positions': zero,
+                'linf_errors': ['0.0005', '0.0005'],
+            },
+        }
+        for name, history in controls.items():
             result = decode(history, F(1, 2))
             self.assertEqual(result["status"], name.upper())
 

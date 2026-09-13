@@ -1,32 +1,22 @@
-"""Three short examples on the cubic path."""
-from monotone_history import decode
+"""A short local recovery example on the published trefoil geometry."""
+from fractions import Fraction as F
+
+from trefoil_benchmark import endpoints, prepare_case
+from trefoil_history import decode
 
 
-def examples():
-    zero = [["0", "0", "0"], ["0", "0", "0"]]
-    return {
-        "unique": {
-            "times": ["-.02", "0"],
-            "positions": [["-.0396", "-.019404", "0"], ["0", "0", "0"]],
-            "linf_errors": [".0005", ".0005"],
-        },
-        "ambiguous": {
-            "times": ["-.01", ".01"],
-            "positions": zero,
-            "linf_errors": [".06", ".06"],
-        },
-        "incompatible": {
-            "times": ["-.01", ".01"],
-            "positions": zero,
-            "linf_errors": [".0005", ".0005"],
-        },
-    }
+def main():
+    # First duration/error setting in the fixed sensitivity grid; no tuning.
+    case, _ = prepare_case('positive', 4, F(4, 5), 'alternating')
+    print('Published trefoil geometry; synthetic bounded-error positions.')
+    print('50 Hz, span 0.08 s, coordinate-error bound 0.8 m.')
+    for name, history in (('endpoints', endpoints(case['history'])),
+                          ('full history', case['history'])):
+        result = decode(history, 'DMI')
+        branch = result['selected'] or 'none'
+        print(f'{name}: {result["status"]}; branch: {branch}; '
+              f'pruned: {result["pruned"]}')
 
 
-if __name__ == "__main__":
-    for name, history in examples().items():
-        result = decode(history, "1/2")
-        if result["status"] != name.upper():
-            raise RuntimeError(f"Unexpected result for {name}: {result['status']}")
-        branch = result["selected"] or "none"
-        print(f"{name}: {result['status']}; selected branch: {branch}")
+if __name__ == '__main__':
+    main()
