@@ -1,4 +1,4 @@
-# ACC 2027: Certified Branch Recovery
+# ECC 2027: Certified Branch Recovery
 
 Code for **Sharp Distinguishability Bounds and Certified Branch Recovery on
 Self-Intersecting Paths**, by Stanislav Kim and Anton Pyrkin.
